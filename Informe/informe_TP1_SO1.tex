@@ -1,0 +1,524 @@
+% simple.tex - A simple article to illustrate document structure.
+
+% Andrew Roberts - June 2003
+
+\documentclass{article}
+\usepackage[spanish]{babel}%Para el español
+\usepackage[utf8]{inputenc}
+\usepackage{times}
+\usepackage{color}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{listings}
+\usepackage{textcomp}
+\usepackage{pdfpages}
+\usepackage[affil-it]{authblk}
+
+\usepackage{caption}
+\DeclareCaptionFont{white}{\color{white}}
+\definecolor{dark-gray}{cmyk}{0,0,0,0.7}
+\DeclareCaptionFormat{listing}{\colorbox{dark-gray}{\parbox{\textwidth}{#1#2#3}}}
+\captionsetup[lstlisting]{format=listing,labelfont={white,sf},textfont={white,sf}}
+
+\definecolor{lbcolor}{rgb}{0.9,0.9,0.9}
+\lstset{
+backgroundcolor=\color{lbcolor},
+    tabsize=2,    
+%   rulecolor=,
+    language=C,
+    		linewidth=12.2cm,
+		belowcaptionskip=0.25\baselineskip,
+		xleftmargin=\parindent,        
+        %basicstyle=\scriptsize,
+        basicstyle=\footnotesize\ttfamily,
+        upquote=true,
+        aboveskip={1.5\baselineskip},
+        %columns=fixed,
+        showstringspaces=false,
+        extendedchars=false,
+        breaklines=true,
+        prebreak = \raisebox{0ex}[0ex][0ex]{\ensuremath{\hookleftarrow}},
+	%frame=lines,
+        %numbers=left,
+        showtabs=false,
+        showspaces=false,
+        showstringspaces=false,
+        identifierstyle=\ttfamily,
+        commentstyle=\itshape\color{red!70!black},
+        keywordstyle=\bfseries\color[rgb]{0,0,1},
+        %commentstyle=\bfseries\color[rgb]{0.026,0.112,0.095},
+        %stringstyle=\bfseries\color[rgb]{0.627,0.126,0.941},
+        stringstyle=\bfseries\color{green!50!black},
+        numberstyle=\bfseries\color[rgb]{0.205, 0.142, 0.73},
+%        \lstdefinestyle{C++}{language=C++,style=numbers}’.
+}
+
+\renewcommand{\lstlistingname}{Listado}
+\renewcommand{\familydefault}{\rmdefault}
+\pretolerance=2000
+\tolerance=3000
+\newcommand{\HRule}{\rule{\linewidth}{0.5mm}} % Defines a new command for the horizontal lines, change thickness here
+
+\begin{document}
+
+% Article top matter
+\title{Trabajo Práctico Nro.1\\
+		\HRule \\[0.4cm]		
+		{\huge \bfseries{Observando el Comportamiento de Linux}}\\[0.4cm]
+		\HRule \\[1.5cm]
+		\textsc{ Sistemas Operativos I}\\
+		\textsc{2013}
+		} %\LaTeX is a macro for printing the Latex logo
+\author{Esteban Andrés Morales\\
+		\texttt{\small andresteve07@gmail.com}
+		}  %\texttt formats the text to a typewriter style font
+\affil{Facultad de Ciencias Exáctas, Físicas \& Naturales, Universidad Nacional de Córdoba, Argentina.}
+\date{\today}  %\today is replaced with the current date
+\maketitle
+
+\begin{abstract}  
+En este trabajo práctico se exploró el sistema de archivos virtual /proc de Linux, en busca de información interna del kernel. Con el objetivo de mostrar los resultados de la lectura e interpretación de archivos se programó una aplicación en C denominada ksamp que imprime de diversas formas subconjuntos de la información disponible en /proc. 
+
+\end{abstract}
+
+\section{Introduction}
+Podemos pensar el kernel de Linux como una colección de funciones y estructuras de datos. Estas estructuras de datos (o variables de kernel) contienen la visión del kernel respecto al estado del sistema, donde cada interrupción, cada llamada al sistema, cada fallo de protección hacen que este estado cambie. 
+Inspeccionando las variables del kernel podemos obtener información relevante a los procesos, interrupciones, dispositivos, sistemas de archivos, capacidades del hardware, etc.
+Muchas variables conforman el estado del kernel y estas pueden estar alojadas de manera estática o dinámica en un stack frame de la memoria del kernel.
+Dado que el Kernel de Linux es un programa C de código abierto, es posible inspeccionar el código fuente y encontrar algunos ejemplos relevantes de estas variables.
+Por ejemplo, en Kernels 2.4.x, xtime definido en \verb+/include/linux/sched.h+ que mantiene la hora del sistema, la estructura \verb+task_struct+ definida en \verb+/include/linux/sched.h+ que contiene la descripción completa de un proceso, o los valores \verb+nr_threads+ y \verb+nr_running+ definidos en \verb+/kernel/fork.c+ los cuales indican cuantos procesos existen y cuantos de estos están corriendo.
+El código fuente de Linux lo podemos encontrar en el directorio \verb+/usr/src/linux+ de la mayoría de las distribuciones, pero también existen páginas donde podemos navegar el código de varias versiones de kernel, como por ejemplo  Linux Cross Reference. También existen utilidades para navegación de código local como Source Navigator.
+
+\section{Tareas}
+\subsection{Tarea A}
+Buscar información acerca estructura del directorio \verb+/proc+, y averiguar los siguientes datos, teniendo en cuenta la versión de kernel que está corriendo:
+\begin{itemize}
+\item Tipo y Modelo de CPU.
+\item Versión del kernel.
+\item Tiempo de Funcionamiento.
+\item Uso del Procesador.
+\item Memoria.
+\item Solicitudes de Acceso a Disco.
+\item Cambios de contexto.
+\item Cantidad de Procesos.
+\end{itemize}
+\subsection{Tarea B}
+Se escribió una versión inicial del programa \verb+ksamp+ que inspeccione las variables del kernel a través del \verb+/proc+ e informe por \verb+stdout+:
+ 
+\begin{itemize}
+\item Tipo y Modelo de CPU.
+\item Versión del kernel.
+\item Tiempo de Funcionamiento.
+\end{itemize}
+{\fontfamily{\ttdefault}\selectfont
+\begin{lstlisting}[language=c,caption=Función imprimirB()., tabsize=2] 
+void imprimirB(){
+	cabecera();
+	leer_CPU();
+	leer_Kernel();
+	leer_TiempoT();
+}
+\end{lstlisting}}
+\subsubsection*{Tipo y Modelo de CPU.}
+Es posible encontrar la información acerca del tipo y modelo del procesador en el archivo \verb+/proc/cpuinfo+.
+{\fontfamily{\ttdefault}\selectfont
+\begin{lstlisting}[language=c,caption=Función leer\_CPU()., breaklines=true] 
+void leer_CPU(){
+	
+	FILE *f;
+	
+	f = fopen("/proc/cpuinfo","r");
+	printf("Tipo de CPU:      %s\n",leer_palabra(1,obtener_linea_pos(f,nro_linea_con_palabra(f,"vendor_id"))));
+	printf("Modelo de CPU:    ");
+	int i;
+	int cant_pal=cant_palabras(obtener_linea_pos(f,nro_linea_con_palabra(f,"model name")));
+	for(i=2;i<cant_pal;i++){
+		printf("%s ",leer_palabra(i,obtener_linea_pos(f,nro_linea_con_palabra(f,"model name"))));
+	}
+	printf("\n");
+	fclose(f);
+	
+}
+}
+\end{lstlisting}}
+\subsubsection*{Versión del kernel.}
+Puede leerse la versión del Kernel en \verb+/proc/sys/kernel/osrelease+.
+{\fontfamily{\ttdefault}\selectfont
+\begin{lstlisting}[language=c,caption=Función leer\_kernel()., breaklines=true] 
+void leer_Kernel(){
+	FILE *f;
+	
+	f = fopen("/proc/sys/kernel/osrelease","r");
+	printf("Kernel:           %s",obtener_linea_pos(f,0));	
+	fclose(f);
+}
+\end{lstlisting}}
+
+\subsubsection*{Tiempo de Funcionamiento}
+Tiempo en días, horas, minutos y segundos que han transurrido desde que se inició el sistema operativo puede encontrarse en \verb+/proc/uptime+ y se muestra con el formato \verb+dd:hh:mm:ss+.
+{\fontfamily{\ttdefault}\selectfont
+\begin{lstlisting}[language=c,caption=Función leer\_TiempoT()., breaklines=true] 
+void leer_TiempoT(){
+	FILE *f;
+	
+	f = fopen("/proc/uptime","r");
+	char* aux = obtener_linea_pos(f,0);
+	//printf("_______%s________\n",aux);
+	char* num=leer_palabra(0,aux);
+	int segundos=atoi( num );
+	int dias, horas, minutos;
+    dias = segundos/(3600*24);
+    horas = segundos/(60*60);
+    segundos %= 60*60;
+    minutos = segundos / 60;
+    segundos %= 60;
+	printf("Up Time:          %i:%i:%i:%i\n",dias,horas,minutos,segundos);
+	fclose(f);	
+}
+\end{lstlisting}}
+\subsubsection*{Cabecera}
+También se incluye una cabecera donde se indica el nombre de la máquina, la fecha y hora actuales.
+{\fontfamily{\ttdefault}\selectfont
+\begin{lstlisting}[language=c,caption=Función cabecera()., breaklines=true] 
+void cabecera(){
+	FILE *f;
+	f = fopen("/proc/sys/kernel/hostname","r");
+	printf("************************************************************\n");
+	printf("Nombre:                    %s",obtener_linea_pos(f,0));
+	time_t rawtime;
+	time ( &rawtime );
+	printf("Fecha y hora actual:       %s",ctime(&rawtime));
+	printf("************************************************************\n\n");
+	
+	fclose(f);
+}
+\end{lstlisting}}
+\subsection{Parte C}
+Se escribe una segunda versión del programa \verb+ksamp+ que imprime la misma información que la versión por defecto, pero en caso de invocarse con la opción \-s, agrega la siguiente información
+\begin{itemize}
+\item Uso del Procesador.
+\item Cambios de contexto.
+\item Fecha y Hora de Inicio.
+\item Cantidad de Procesos.
+\end{itemize}
+
+{\fontfamily{\ttdefault}\selectfont
+\begin{lstlisting}[language=c,caption=Función imprimirC()., breaklines=true] 
+void imprimirC(){
+	imprimirB();
+	printf("____________________________________________________________\n");
+	leer_CPUT();
+	leer_CCCONTEXTO();
+	FyHInicio();
+	leer_NumProc();
+	
+}
+\end{lstlisting}}
+
+\subsubsection*{Uso del Procesador}
+Cuanto tiempo de CPU ha sido empleado para procesos de usuario, de sistema y cuanto tiempo no se usó, para ello se busca en el archivo \verb+/proc/stat+.
+{\fontfamily{\ttdefault}\selectfont
+\begin{lstlisting}[language=c,caption=Función leer\_CPUT()., breaklines=true] 
+void leer_CPUT(){
+	FILE *f;
+	
+	f = fopen("/proc/stat","r");
+	//char* aux = obtener_linea_pos(f,nro_linea_con_palabra(f,"cpu "));
+	//printf("_____________%i___________\n",nro_linea_con_palabra(f,"cpu"));
+	printf("Tiempo de Usuario:        %s USER_HZ (jiffies)\n",leer_palabra(1,obtener_linea_pos(f,nro_linea_con_palabra(f,"cpu"))));
+	printf("Tiempo de Sistema:        %s USER_HZ (jiffies)\n",leer_palabra(3,obtener_linea_pos(f,nro_linea_con_palabra(f,"cpu"))));
+	printf("Tiempo sin uso:           %s USER_HZ (jiffies)\n",leer_palabra(4,obtener_linea_pos(f,nro_linea_con_palabra(f,"cpu"))));
+	fclose(f);
+	
+	
+	
+}
+\end{lstlisting}}
+\subsubsection*{Cambios de contexto}
+Cuantos cambios de contexto han sucedido.
+{\fontfamily{\ttdefault}\selectfont
+\begin{lstlisting}[language=c,caption=Función leer\_CCCONTEXTO()., breaklines=true] 
+void leer_CCCONTEXTO(){
+	FILE *f;
+	f = fopen("/proc/stat","r");
+	printf("Cambios de Contexto:      %s\n", leer_palabra(1,obtener_linea_pos(f,nro_linea_con_palabra(f,"ctxt"))));
+	fclose(f);
+}
+\end{lstlisting}}
+\subsubsection*{Fecha y Hora de Inicio}
+Se especifica la fecha y hora cuando el sistema fue iniciado.
+{\fontfamily{\ttdefault}\selectfont
+\begin{lstlisting}[language=c,caption=Función FyHInicio()., breaklines=true] 
+void FyHInicio(){
+	FILE *f;
+	f=fopen("/proc/uptime","r");
+	
+	char* linea=obtener_linea_pos(f,0);
+	//printf("Fecha y hora de inicio:   %s",linea);
+	char* tiempo_str=leer_palabra(0,linea);
+	
+	int tiempo_int=atoi(tiempo_str);
+	
+	time_t tiempo_t; // declare a time_t variable
+	tiempo_t = (time_t) tiempo_int; // case the time_t variable to a long int
+	
+	time_t tiempo_actual =time(0);
+	time_t tiempo_ini=tiempo_actual-tiempo_t;
+	printf("Fecha y hora de inicio:   %s",ctime(&tiempo_ini));
+	fclose(f);
+}
+\end{lstlisting}}
+\subsubsection*{Cantidad de Procesos}
+Se muestra la cantidad de procesos que se crearon desde que inició el sistema.
+{\fontfamily{\ttdefault}\selectfont
+\begin{lstlisting}[language=c,caption=Función leer\_NumProc()., breaklines=true] 
+void leer_NumProc(){
+	FILE *f;
+	f = fopen("/proc/stat","r");
+	printf("Nro Procesos:             %s\n", leer_palabra(1,obtener_linea_pos(f,nro_linea_con_palabra(f,"processes"))));
+	fclose(f);
+}
+\end{lstlisting}}
+\subsection{ParteD}
+La tercera parte involucra imprimir todo lo de las versiones anteriores, pero cuando se invoca con la opción \verb+-l tmp int+ donde tmp e int son números enteros siendo el primero el tiempo de muestreo y el segundo el intervalo de impresión, además:
+\begin{itemize}
+\item Solicitudes de acceso al Disco.
+\item Memoria Instalada.
+\item Memoria Disponible.
+\item Fecha y Hora de Inicio.
+\item Lista de promedio de carga por 1 minuto.
+\end{itemize}
+\subsubsection*{Solicitudes de Acceso a Disco}
+Cuantos pedidos de lectura/escritura a disco se han realizado.
+{\fontfamily{\ttdefault}\selectfont
+\begin{lstlisting}[language=c,caption=Función leer\_NumPetD()., breaklines=true] 
+void leer_NumPetD(){
+	FILE *f;
+	f = fopen("/proc/diskstats","r");
+	
+	printf("Peticiones a disco:                     %s\n", leer_palabra(3,obtener_linea_pos(f,nro_linea_con_palabra(f,"sda"))));
+	fclose(f);
+}
+\end{lstlisting}}
+\subsubsection*{Memoria Instalada}
+Cuanta memoria se configuró en el Hardware.
+{\fontfamily{\ttdefault}\selectfont
+\begin{lstlisting}[language=c,caption=Función leer\_TotalMEM()., breaklines=true] 
+void leer_TotalMEM(){
+	FILE *f;
+	f = fopen("/proc/meminfo","r");
+	int memt=atoi(leer_palabra(1,obtener_linea_pos(f,0)));
+	printf("Memoria Total:                          %i KB\n",memt);
+	fclose(f);
+}
+\end{lstlisting}}
+
+\subsubsection*{Memoria Disponible}
+Cuanta memoria tiene y cuanta está disponible.
+{\fontfamily{\ttdefault}\selectfont
+\begin{lstlisting}[language=c,caption=Función leer\_MEMDisp()., breaklines=true] 
+void leer_MEMDisp(){
+	FILE *f;
+	f = fopen("/proc/meminfo","r");
+	int memd=atoi(leer_palabra(1,obtener_linea_pos(f,1)));
+	printf("Memoria Disponible:                     %i KB\n",memd);
+	fclose(f);
+}
+\end{lstlisting}}
+
+\subsubsection*{Listado de Promedio de Carga}
+Se muestra el promedio de carga por minuto en la pantalla cuando se hace uso de la opción \verb+-l tmp int+ donde tmp e int son números enteros siendo el primero el tiempo de muestreo y el segundo el intervalo de impresión:
+{\fontfamily{\ttdefault}\selectfont
+\begin{lstlisting}[language=c,caption=Función imprimirD()., breaklines=true] 
+void imprimirD(const char* p, const char* t){
+	imprimirC();
+	char* periodo=strdup(p);
+	char* totalt=strdup(t);
+	int per=atoi(periodo);
+	int total=atoi(totalt);
+
+	int i=0;
+	while(i<(total/per)){	
+	printf("____________________________________________________________\n");
+	leer_NumPetD();
+	leer_TotalMEM();
+	leer_MEMDisp();
+	leer_promCar();
+	sleep(per);
+	i++;
+	}
+}
+\end{lstlisting}}
+\subsection{Tareas Adicionales}
+Se implementó la funcionalidad adicional de mostrar los valores que estaban en bytes en MBytes, para acceder a esta función debe usarse la opción \verb+-h+ o bien \verb+--humanamente+. A continución se listan las funciones.
+
+{\fontfamily{\ttdefault}\selectfont
+\begin{lstlisting}[language=c,caption=Función leer\_MEMDispPH()., breaklines=true] 
+void leer_MEMDispPH(){
+	FILE *f;
+	f = fopen("/proc/meminfo","r");
+	int memd=atoi(leer_palabra(1,obtener_linea_pos(f,1)));
+	printf("Memoria Disponible:                     %i MB\n",memd/1024);
+	fclose(f);
+}
+\end{lstlisting}}
+
+
+{\fontfamily{\ttdefault}\selectfont
+\begin{lstlisting}[language=c,caption=Función leer\_TotalMEMPH()., breaklines=true] 
+void leer_TotalMEMPH(){
+	FILE *f;
+	f = fopen("/proc/meminfo","r");
+	int memt=atoi(leer_palabra(1,obtener_linea_pos(f,0)));
+	printf("Memoria Total:                          %i MB\n",memt/1024);
+	fclose(f);
+}
+\end{lstlisting}}
+
+
+{\fontfamily{\ttdefault}\selectfont
+\begin{lstlisting}[language=c,caption=Función imprimirDPH()., breaklines=true] 
+void imprimirDPH(const char* p, const char* t){
+	imprimirC();
+	char* periodo=strdup(p);
+	char* totalt=strdup(t);
+	int per=atoi(periodo);
+	int total=atoi(totalt);
+
+	int i=0;
+	while(i<(total/per)){	
+	printf("____________________________________________________________\n");
+	leer_NumPetD();
+	leer_TotalMEMPH();
+	leer_MEMDispPH();
+	leer_promCar();
+	sleep(per);
+	i++;
+	}
+}
+\end{lstlisting}}
+Adicionalemente cabe mencionar que se hizo uso de la función \verb+getopt()+ de POSIX.2 para el parseo de comandos. A continuación se lista la función principal de la aplicación que implementa la rutina de parseo:
+
+{\fontfamily{\ttdefault}\selectfont
+\begin{lstlisting}[language=c,caption=Función main()., breaklines=true, tabsize=2] 
+int main(int argc, char** argv)
+{
+	int siguiente_opcion;
+  const struct option op_largas[] =
+  {
+      { "help",         0,  NULL,   'H'},
+      { "humanamente",  0,  NULL,   'h'},
+      { "incisoC",      0,  NULL,   's'},
+      { "incisoD",      1,  NULL,   'l'},
+      { NULL,           0,  NULL,   0  }
+  };
+
+  const char* tiempo = NULL ;
+  const char* per = NULL ;
+  
+  int verbose = 0;
+  nombre_programa = argv[0];
+  if (argc == 1)
+  {
+      imprimirB();
+      exit(EXIT_SUCCESS);
+  }
+  int funcion_s=0;
+  int funcion_l=0;
+  int para_humanos=0;
+  while (1)
+  {
+      if(optind>=argc)
+      exit(1);
+      else {
+      char* aux=argv[optind];
+      if((pos_caracter_en_cadena('-',aux)!=0) && !funcion_l){
+		  printf("..::ERROR::..");
+		  imprime_uso();
+		  exit(1);}
+     }
+      siguiente_opcion = getopt_long (argc, argv, op_cortas, op_largas, NULL);
+	  
+      if (siguiente_opcion == -1)
+          break; 
+
+      switch (siguiente_opcion)
+      {
+          case 'h' : 
+              funcion_l=0;
+              if(argc==2){
+				  imprime_uso();
+				  exit(1);
+			  }
+              para_humanos=1;
+              break;
+          case 'H' : 
+              funcion_l=0;
+              imprime_uso();
+              exit(EXIT_SUCCESS);
+			  
+          case 's' : 
+              funcion_s=1;
+              funcion_l=0;
+              imprimirC();
+              break;
+			  
+          case 'l' : 
+              { 
+				funcion_l=1;
+				if(funcion_s == 1){
+					imprime_uso();
+					exit(1);
+				}		
+				int i=0;
+				int pos_l=0; 
+				while( i<argc && pos_l==0 ){
+					if(strcmp(argv[i],"-l")==0)
+						pos_l=i;
+					i++;
+				}
+				if(argc!=pos_l+3){
+					imprime_uso();
+					exit(1);
+				}				
+				per = optarg; 
+				char* aux2 ;
+				aux2=strdup(per);
+				int arg_valido=contiene_solo_nros(aux2);
+					if(!arg_valido){
+						imprime_uso();
+						exit(1);
+					}
+					else
+					{
+							tiempo = argv[optind];
+							char* aux3 = strdup(tiempo);
+							if(!contiene_solo_nros(aux3)){
+								imprime_uso();
+								exit(1);
+							}
+							if(para_humanos)
+							imprimirDPH(per,tiempo);
+							else
+							imprimirD(per,tiempo);
+					}
+				}
+              break;
+			  
+          case '?' : 
+              funcion_l=0;
+              imprime_uso(); 
+              exit(1);
+		 
+          case -1 : 
+              funcion_l=0;
+              break;
+			
+          default : 
+              abort();
+	  }
+  }
+  return 0;
+
+}
+\end{lstlisting}}
+\end{document}
